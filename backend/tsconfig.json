@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+      /* Base Options */
+      "target": "ES2020",                      // Modern but compatible JS target
+      "module": "CommonJS",                   // CRITICAL: Use the CommonJS module system
+      "lib": ["ES2020"],                        // Standard libraries for the target
+  
+      /* Strictness */
+      "strict": true,
+      "skipLibCheck": true,
+  
+      /* Module Resolution */
+      "moduleResolution": "node",             // CRITICAL: How to find modules (the Node.js way)
+      "esModuleInterop": true,                // CRITICAL: Allows 'import express from "express"' syntax
+      "resolveJsonModule": true,
+  
+      /* Output */
+      "outDir": "./dist",                       // Where to output compiled JavaScript
+      "rootDir": "./src",
+  
+      /* Source Maps */
+      "sourceMap": true
+    },
+    "include": ["src/**/*"],                    // Which files to include in compilation
+    "exclude": ["node_modules"]
+  }
