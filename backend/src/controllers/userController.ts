@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 
-// Search for users by name or email
 export const searchUsers = async (req: Request, res: Response) => {
-    const { q } = req.query; // q is the search query
+    const { q } = req.query;
 
-    if (typeof q !== 'string' || q.length < 2) {
+    if (typeof q !== 'string' || q.trim().length < 2) {
         return res.status(400).json({ message: 'Search query must be at least 2 characters long.' });
     }
 
@@ -17,11 +16,12 @@ export const searchUsers = async (req: Request, res: Response) => {
                     { email: { contains: q, mode: 'insensitive' } }
                 ]
             },
-            select: { id: true, name: true, email: true },
-            take: 10 // Limit results to 10 to avoid overwhelming the frontend
+            select: { id: true, name: true, email: true, role: true },
+            take: 10
         });
         res.json(users);
     } catch (error) {
+        console.error("User search failed:", error);
         res.status(500).json({ message: 'User search failed.' });
     }
 }

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../api/axiosConfig';
 
-// Define the type for a resource object
 interface Resource {
   id: string;
   title: string;
@@ -12,7 +11,6 @@ interface Resource {
   };
 }
 
-// Define the type for resources grouped by category
 interface GroupedResources {
   [categoryName: string]: Resource[];
 }
@@ -26,7 +24,6 @@ const ResourcesView = () => {
       try {
         const { data } = await axios.get<Resource[]>('/api/resources');
         
-        // Group the resources by category name
         const groups = data.reduce((acc, resource) => {
           const category = resource.category.name;
           if (!acc[category]) {
@@ -61,7 +58,7 @@ const ResourcesView = () => {
               </h2>
               <ul className="space-y-3">
                 {resources.map((resource) => (
-                  <li key={resource.id} className="p-4 bg-white rounded-lg shadow flex items-center justify-between">
+                  <li key={resource.id} className="p-4 bg-white rounded-lg border shadow-sm flex items-center justify-between">
                     <div>
                       <p className="text-lg font-medium text-gray-800">{resource.title}</p>
                       {resource.description && (
@@ -72,7 +69,7 @@ const ResourcesView = () => {
                       href={resource.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors"
+                      className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
                     >
                       Download
                     </a>

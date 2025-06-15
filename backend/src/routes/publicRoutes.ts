@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { getPublicTeams } from '../controllers/publicController';
+import { getPublicChapters } from '../controllers/publicController';
+
 const router = Router();
 
-// This route does NOT have the isAuthenticated middleware
-router.get('/teams', getPublicTeams);
+router.get('/chapters', getPublicChapters);
 
 export default router;

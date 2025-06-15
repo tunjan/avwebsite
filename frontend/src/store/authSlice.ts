@@ -1,26 +1,26 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, isRejectedWithValue } from '@reduxjs/toolkit';
 import axios from '../api/axiosConfig';
 
-// --- THIS IS THE CORRECTED INTERFACE ---
-// It now includes all properties of the user object from the backend.
 interface User {
     id: string;
     name: string;
     email: string;
     role: string;
-    managedRegionId: string | null; // <-- ADDED THIS PROPERTY
-    memberships: { teamId: string }[];
+    managedRegionId: string | null;
+    memberships: { chapterId: string, role: string }[];
 }
 
 interface AuthState {
     user: User | null;
     token: string | null;
+    error: string | null;
     status: 'idle' | 'loading' | 'succeeded' | 'failed';
 }
 
 const initialState: AuthState = {
     user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null,
     token: localStorage.getItem('token'),
+    error: null,
     status: 'idle',
 };
 
@@ -29,13 +29,18 @@ interface LoginPayload {
     token: string;
 }
 
-export const login = createAsyncThunk(
+export const login = createAsyncThunk<LoginPayload, any, { rejectValue: string }>(
     'auth/login',
-    async (credentials: any) => {
-        const response = await axios.post('/api/auth/login', credentials);
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        return response.data;
+    async (credentials: any, thunkAPI) => {
+        try {
+            const response = await axios.post('/api/auth/login', credentials);
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            return response.data;
+        } catch (error: any) {
+            const message = error.response?.data?.message || error.message || "An unknown error occurred";
+            return thunkAPI.rejectWithValue(message);
+        }
     }
 );
 
@@ -46,6 +51,8 @@ const authSlice = createSlice({
         logout: (state) => {
             state.user = null;
             state.token = null;
+            state.error = null;
+            state.status = 'idle';
             localStorage.removeItem('token');
             localStorage.removeItem('user');
         },
@@ -54,17 +61,17 @@ const authSlice = createSlice({
         builder
             .addCase(login.pending, (state) => {
                 state.status = 'loading';
+                state.error = null;
             })
-            .addCase(
-                login.fulfilled,
-                (state, action: PayloadAction<LoginPayload>) => {
-                    state.status = 'succeeded';
-                    state.user = action.payload.user;
-                    state.token = action.payload.token;
-                }
-            )
-            .addCase(login.rejected, (state) => {
+            .addCase(login.fulfilled, (state, action: PayloadAction<LoginPayload>) => {
+                state.status = 'succeeded';
+                state.user = action.payload.user;
+                state.token = action.payload.token;
+                state.error = null;
+            })
+            .addCase(login.rejected, (state, action) => {
                 state.status = 'failed';
+                state.error = action.payload ?? 'Failed to login';
             });
     },
 });

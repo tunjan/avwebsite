@@ -1,20 +1,11 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
-import { User } from '@prisma/client';
+import { User, Role } from '@prisma/client';
 
 export const getUserStats = async (req: Request, res: Response) => {
     const user = req.user as User;
 
     try {
-        // 1. Count the number of events the user actually attended
-        const attendedEventsCount = await prisma.eventRegistration.count({
-            where: {
-                userId: user.id,
-                attended: true,
-            }
-        });
-
-        // 2. Calculate the total hours from those attended events
         const attendedRegistrations = await prisma.eventRegistration.findMany({
             where: {
                 userId: user.id,
@@ -28,13 +19,13 @@ export const getUserStats = async (req: Request, res: Response) => {
         });
 
         const totalHours = attendedRegistrations.reduce((sum, reg) => {
+            if (!reg.event.startTime || !reg.event.endTime) return sum;
             const durationMs = reg.event.endTime.getTime() - reg.event.startTime.getTime();
-            const durationHours = durationMs / (1000 * 60 * 60);
-            return sum + durationHours;
+            return sum + (durationMs / (1000 * 60 * 60));
         }, 0);
 
         res.json({
-            participatedEvents: attendedEventsCount,
+            participatedEvents: attendedRegistrations.length,
             totalHours: parseFloat(totalHours.toFixed(2)),
         });
 
@@ -44,66 +35,76 @@ export const getUserStats = async (req: Request, res: Response) => {
     }
 }
 
-// ... (imports and existing getUserStats function)
-
 export const getOrganizerSummary = async (req: Request, res: Response) => {
     const user = req.user as User;
 
+    if (user.role === Role.ACTIVIST) {
+        return res.status(403).json({ message: "This summary is for organizers only." });
+    }
+
     try {
-        let managedTeamIds: string[] = [];
-        let pendingRequestsQuery: any = { where: { status: 'PENDING' } };
-        let upcomingEventsQuery: any = { where: { startTime: { gte: new Date() } } };
+        let managedChapterIds: string[] = [];
+        let managedRegionIds: string[] = [];
 
-        // Tailor queries based on user role
-        if (user.role === 'CITY_ORGANISER') {
-            const memberships = await prisma.teamMembership.findMany({ where: { userId: user.id }, select: { teamId: true } });
-            managedTeamIds = memberships.map(m => m.teamId);
-            pendingRequestsQuery.where.teamId = { in: managedTeamIds };
-            upcomingEventsQuery.where.teamId = { in: managedTeamIds };
-        } else if (user.role === 'REGIONAL_ORGANISER' && user.managedRegionId) {
-            const teamsInRegion = await prisma.team.findMany({ where: { regionId: user.managedRegionId }, select: { id: true } });
-            managedTeamIds = teamsInRegion.map(t => t.id);
-            pendingRequestsQuery.where.teamId = { in: managedTeamIds };
-            upcomingEventsQuery.where.OR = [
-                { teamId: { in: managedTeamIds } },
-                { regionId: user.managedRegionId }
-            ];
-        } // COFOUNDER will have no restrictions, fetching all
-
-        // --- Execute Queries ---
-        const pendingJoinRequests = await prisma.joinRequest.findMany({
-            ...pendingRequestsQuery,
-            include: { user: { select: { name: true } }, team: { select: { name: true } } },
-            orderBy: { createdAt: 'desc' },
-            take: 5,
-        });
-
-        const upcomingManagedEvents = await prisma.event.findMany({
-            ...upcomingEventsQuery,
-            orderBy: { startTime: 'asc' },
-            take: 5,
-        });
-
-        const totalMembers = managedTeamIds.length > 0 ? await prisma.teamMembership.count({ where: { teamId: { in: managedTeamIds } } }) : 0;
-
-        // For recent growth, count members who joined in the last 30 days
-        const recentGrowth = managedTeamIds.length > 0 ? await prisma.teamMembership.count({
-            where: {
-                teamId: { in: managedTeamIds },
-                joinedAt: { gte: new Date(new Date().setDate(new Date().getDate() - 30)) }
+        if (user.role === Role.COFOUNDER) {
+            const allChapters = await prisma.chapter.findMany({ select: { id: true } });
+            managedChapterIds = allChapters.map(c => c.id);
+        } else {
+            if (user.role === Role.REGIONAL_ORGANISER && user.managedRegionId) {
+                const chaptersInRegion = await prisma.chapter.findMany({
+                    where: { regionId: user.managedRegionId },
+                    select: { id: true }
+                });
+                managedChapterIds.push(...chaptersInRegion.map(c => c.id));
+                managedRegionIds.push(user.managedRegionId);
             }
-        }) : 0;
+            const cityOrganiserMemberships = await prisma.chapterMembership.findMany({
+                where: { userId: user.id, role: Role.CITY_ORGANISER },
+                select: { chapterId: true }
+            });
+            managedChapterIds.push(...cityOrganiserMemberships.map(m => m.chapterId));
+        }
+
+        const uniqueManagedChapterIds = [...new Set(managedChapterIds)];
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const [pendingJoinRequests, upcomingManagedEvents, totalMembers, recentGrowth] = await Promise.all([
+            prisma.joinRequest.findMany({
+                where: { status: 'PENDING', chapterId: { in: uniqueManagedChapterIds } },
+                include: { user: { select: { name: true } }, chapter: { select: { name: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+            }),
+            prisma.event.findMany({
+                where: {
+                    startTime: { gte: new Date() },
+                    OR: [
+                        { chapterId: { in: uniqueManagedChapterIds } },
+                        { regionId: { in: managedRegionIds } }
+                    ]
+                },
+                orderBy: { startTime: 'asc' },
+                take: 5,
+            }),
+            uniqueManagedChapterIds.length > 0 ? prisma.chapterMembership.count({ where: { chapterId: { in: uniqueManagedChapterIds } } }) : 0,
+            uniqueManagedChapterIds.length > 0 ? prisma.chapterMembership.count({
+                where: {
+                    chapterId: { in: uniqueManagedChapterIds },
+                    joinedAt: { gte: thirtyDaysAgo }
+                }
+            }) : 0
+        ]);
 
         res.json({
             pendingJoinRequests,
             upcomingManagedEvents,
-            stats: {
-                totalMembers,
-                recentGrowth
-            }
+            stats: { totalMembers, recentGrowth }
         });
 
     } catch (error) {
+        console.error("Error fetching organizer summary:", error);
         res.status(500).json({ message: 'Failed to fetch organizer summary.' });
     }
 }

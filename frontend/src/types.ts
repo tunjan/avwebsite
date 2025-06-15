@@ -1,9 +1,10 @@
-export interface Team {
+export interface Chapter {
     id: string;
     name: string;
+    description?: string;
+    regionId?: string;
 }
 
-// --- ADD THIS NEW INTERFACE ---
 export interface Region {
     id: string;
     name: string;

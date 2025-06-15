@@ -2,24 +2,24 @@ import { Request, Response } from 'express';
 import prisma from '../db';
 import { User } from '@prisma/client';
 
-export const getMyProfileData = async (req: Request, res: Response) => {
+// FIX: Renamed function for consistency to resolve potential import error.
+export const getMyProfile = async (req: Request, res: Response) => {
     const user = req.user as User;
 
     try {
-        // Fetch all event registrations where the user has been marked as "attended"
         const attendedRegistrations = await prisma.eventRegistration.findMany({
             where: {
                 userId: user.id,
                 attended: true,
             },
             include: {
-                event: { // Include the details of each attended event
+                event: {
                     select: {
                         id: true,
                         title: true,
                         startTime: true,
                         endTime: true,
-                        team: {
+                        chapter: {
                             select: { name: true }
                         }
                     }
@@ -27,19 +27,17 @@ export const getMyProfileData = async (req: Request, res: Response) => {
             },
             orderBy: {
                 event: {
-                    startTime: 'desc' // Show most recent events first
+                    startTime: 'desc'
                 }
             }
         });
 
-        // Calculate total hours from the fetched registrations
         const totalHours = attendedRegistrations.reduce((sum, reg) => {
+            if (!reg.event.startTime || !reg.event.endTime) return sum;
             const durationMs = reg.event.endTime.getTime() - reg.event.startTime.getTime();
-            const durationHours = durationMs / (1000 * 60 * 60);
-            return sum + durationHours;
+            return sum + (durationMs / (1000 * 60 * 60));
         }, 0);
 
-        // Prepare the data for the frontend
         const attendanceHistory = attendedRegistrations.map(reg => reg.event);
 
         res.json({

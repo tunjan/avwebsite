@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import prisma from '../db';
 import { User } from '@prisma/client';
 
-// Get comments for a specific target (event or announcement)
 export const getComments = async (req: Request, res: Response) => {
     const { eventId, announcementId } = req.query;
 
@@ -10,14 +9,13 @@ export const getComments = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'A target ID (eventId or announcementId) is required.' });
     }
 
+    const whereClause: any = {};
+    if (eventId) whereClause.eventId = eventId as string;
+    if (announcementId) whereClause.announcementId = announcementId as string;
+
     try {
         const comments = await prisma.comment.findMany({
-            where: {
-                OR: [
-                    { eventId: eventId as string | undefined },
-                    { announcementId: announcementId as string | undefined }
-                ]
-            },
+            where: whereClause,
             include: {
                 author: { select: { id: true, name: true } }
             },
@@ -29,12 +27,11 @@ export const getComments = async (req: Request, res: Response) => {
     }
 };
 
-// Create a new comment
 export const createComment = async (req: Request, res: Response) => {
     const user = req.user as User;
     const { content, eventId, announcementId } = req.body;
 
-    if (!content) {
+    if (!content || !content.trim()) {
         return res.status(400).json({ message: 'Comment content cannot be empty.' });
     }
     if (!eventId && !announcementId) {

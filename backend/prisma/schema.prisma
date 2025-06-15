@@ -14,156 +14,10 @@ enum Role {
   COFOUNDER
 }
 
-model User {
-  id                    String                 @id @default(cuid())
-  email                 String                 @unique
-  password              String
-  name                  String
-  role                  Role                   @default(ACTIVIST)
-  createdAt             DateTime               @default(now())
-  memberships           TeamMembership[]
-  managedRegion         Region?                @relation("RegionalOrganiserOf", fields: [managedRegionId], references: [id])
-  managedRegionId       String?                @unique
-  registrations         EventRegistration[]
-  trainingRegistrations TrainingRegistration[]
-  joinRequests          JoinRequest[] 
-  announcements Announcement[] 
-  comments              Comment[]        
-
-}
-
-model Region {
-  id                String     @id @default(cuid())
-  name              String     @unique
-  teams             Team[]
-  regionalOrganiser User?      @relation("RegionalOrganiserOf")
-  trainings         Training[]
-  events            Event[] 
-  announcements Announcement[]
-}
-
-model Comment {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
-
-  eventId         String?
-  event           Event?  @relation(fields: [eventId], references: [id])
-  announcementId  String?
-  announcement    Announcement? @relation(fields: [announcementId], references: [id])
-}
-
-model Team {
-  id          String           @id @default(cuid())
-  name        String
-  description String?
-  regionId    String
-  region      Region           @relation(fields: [regionId], references: [id])
-  memberships TeamMembership[]
-  events      Event[]
-  trainings   Training[]
-  joinRequests JoinRequest[]
-  announcements Announcement[]
-}
-
-model TeamMembership {
-  user     User     @relation(fields: [userId], references: [id])
-  userId   String
-  team     Team     @relation(fields: [teamId], references: [id])
-  teamId   String
-  joinedAt DateTime @default(now())
-
-  @@id([userId, teamId])
-}
-
-model Event {
-  id            String   @id @default(cuid())
-  title         String
-  description   String
-  startTime     DateTime
-  endTime       DateTime
-  location      String
-    scope         TrainingScope @default(CITY) 
-
-  teamId        String?
-  team          Team?    @relation(fields: [teamId], references: [id])
-  
-  regionId      String? 
-  region        Region?  @relation(fields: [regionId], references: [id])
-
-  comments Comment[]
-  
-  registrations EventRegistration[]
-}
-
-
-model EventRegistration {
-  id      String @id @default(cuid())
-  user    User   @relation(fields: [userId], references: [id])
-  userId  String
-  event   Event  @relation(fields: [eventId], references: [id])
-  eventId String
-  attended  Boolean  @default(false)
-
-  @@unique([userId, eventId])
-}
-
-
-model ResourceCategory {
-  id        String      @id @default(cuid())
-  name      String      @unique
-  resources Resource[]
-}
-
-model Resource {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  fileUrl     String   // This will be a URL pointing to the file
-  createdAt   DateTime @default(now())
-
-  category   ResourceCategory @relation(fields: [categoryId], references: [id])
-  categoryId String
-}
-
-enum TrainingScope {
+enum ContentScope {
   CITY
   REGIONAL
   GLOBAL
-}
-
-
-model Training {
-  id            String   @id @default(cuid())
-  title         String
-  description   String
-  startTime     DateTime
-  duration      Float // Duration in hours
-  
-  scope         TrainingScope // e.g., CITY, REGIONAL
-  
-  // Optional links depending on the scope
-  teamId        String?  // For CITY scope
-  team          Team?    @relation(fields: [teamId], references: [id])
-  
-  regionId      String?  // For REGIONAL scope
-  region        Region?  @relation(fields: [regionId], references: [id])
-  
-  registrations TrainingRegistration[]
-}
-
-model TrainingRegistration {
-  id         String   @id @default(cuid())
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String
-  training   Training @relation(fields: [trainingId], references: [id])
-  trainingId String
-  createdAt  DateTime @default(now())
-
-  @@unique([userId, trainingId])
 }
 
 enum JoinRequestStatus {
@@ -172,36 +26,203 @@ enum JoinRequestStatus {
   DENIED
 }
 
+model User {
+  id              String  @id @default(cuid())
+  email           String  @unique
+  password        String
+  name            String
+  role            Role    @default(ACTIVIST)
+  createdAt       DateTime @default(now())
+
+  // FIX: Restored the @unique attribute to correctly define the one-to-one relation.
+  managedRegionId String?  @unique
+
+  // RELATIONS
+  memberships           ChapterMembership[]
+  managedRegion         Region?                @relation("RegionalOrganiserOf", fields: [managedRegionId], references: [id])
+  registrations         EventRegistration[]
+  trainingRegistrations TrainingRegistration[]
+  joinRequests          JoinRequest[]
+  createdAnnouncements  Announcement[]         @relation("AuthorOfAnnouncement")
+  createdEvents         Event[]                @relation("AuthorOfEvent")
+  createdTrainings      Training[]             @relation("AuthorOfTraining")
+  comments              Comment[]              @relation("AuthorOfComment")
+}
+
+model Region {
+  id                String       @id @default(cuid())
+  name              String       @unique
+
+  // RELATIONS
+  chapters          Chapter[]
+  regionalOrganiser User?        @relation("RegionalOrganiserOf")
+  events            Event[]      @relation("RegionEvents")
+  trainings         Training[]   @relation("RegionTrainings")
+  announcements     Announcement[] @relation("RegionAnnouncements")
+}
+
+model Chapter {
+  id            String            @id @default(cuid())
+  name          String
+  description   String?
+
+  regionId      String
+  region        Region            @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  memberships   ChapterMembership[]
+  events        Event[]           @relation("ChapterEvents")
+  trainings     Training[]        @relation("ChapterTrainings")
+  joinRequests  JoinRequest[]
+  announcements Announcement[]    @relation("ChapterAnnouncements")
+}
+
+model ChapterMembership {
+  userId    String
+  chapterId String
+  joinedAt  DateTime @default(now())
+  role      Role     @default(ACTIVIST)
+
+  // RELATIONS
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@id([userId, chapterId])
+}
+
+model Event {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  startTime   DateTime
+  endTime     DateTime
+  location    String
+  scope       ContentScope @default(CITY)
+
+  authorId    String
+  authorRole  Role
+  author      User         @relation("AuthorOfEvent", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  chapterId     String?
+  chapter       Chapter?     @relation("ChapterEvents", fields: [chapterId], references: [id], onDelete: Cascade)
+  regionId      String?
+  region        Region?      @relation("RegionEvents", fields: [regionId], references: [id], onDelete: SetNull)
+  registrations EventRegistration[]
+  comments      Comment[]    @relation("EventComments")
+}
+
+model EventRegistration {
+  userId  String
+  eventId String
+  attended Boolean @default(false)
+
+  // RELATIONS
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([userId, eventId])
+}
+
+model Training {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  startTime   DateTime
+  duration    Float
+  scope       ContentScope
+
+  authorId    String
+  authorRole  Role
+  author      User         @relation("AuthorOfTraining", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  chapterId     String?
+  chapter       Chapter?     @relation("ChapterTrainings", fields: [chapterId], references: [id], onDelete: Cascade)
+  regionId      String?
+  region        Region?      @relation("RegionTrainings", fields: [regionId], references: [id], onDelete: SetNull)
+  registrations TrainingRegistration[]
+  comments      Comment[]    @relation("TrainingComments")
+}
+
+model TrainingRegistration {
+  userId     String
+  trainingId String
+  createdAt  DateTime @default(now())
+  attended   Boolean  @default(false)
+
+  // RELATIONS
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, trainingId])
+}
+
+model Announcement {
+  id        String       @id @default(cuid())
+  title     String
+  content   String       @db.Text
+  createdAt DateTime     @default(now())
+  scope     ContentScope
+
+  authorId    String
+  authorRole  Role
+  author      User         @relation("AuthorOfAnnouncement", fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // RELATIONS
+  chapterId   String?
+  chapter     Chapter?     @relation("ChapterAnnouncements", fields: [chapterId], references: [id], onDelete: Cascade)
+  regionId    String?
+  region      Region?      @relation("RegionAnnouncements", fields: [regionId], references: [id], onDelete: SetNull)
+  comments    Comment[]    @relation("AnnouncementComments")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  authorId  String
+  author    User     @relation("AuthorOfComment", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // RELATIONS (Comment can belong to one of these)
+  eventId         String?
+  event           Event?  @relation("EventComments", fields: [eventId], references: [id], onDelete: Cascade)
+  announcementId  String?
+  announcement    Announcement? @relation("AnnouncementComments", fields: [announcementId], references: [id], onDelete: Cascade)
+  trainingId      String?
+  training        Training? @relation("TrainingComments", fields: [trainingId], references: [id], onDelete: Cascade)
+}
+
 model JoinRequest {
   id        String            @id @default(cuid())
-  user      User              @relation(fields: [userId], references: [id])
   userId    String
-  team      Team              @relation(fields: [teamId], references: [id])
-  teamId    String
+  chapterId String
   status    JoinRequestStatus @default(PENDING)
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
-  @@unique([userId, teamId])
+  // RELATIONS
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter   Chapter           @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
 }
 
-model Announcement {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @db.Text // Use Text type for longer content
-  createdAt DateTime @default(now())
+model ResourceCategory {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  // RELATIONS
+  resources Resource[]
+}
 
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  fileUrl     String
+  createdAt   DateTime @default(now())
 
-  scope     TrainingScope // Reuse enum: CITY, REGIONAL, GLOBAL
-
-  // Optional links depending on scope
-  teamId    String?
-  team      Team?    @relation(fields: [teamId], references: [id])
-  
-  regionId  String?
-  region    Region?  @relation(fields: [regionId], references: [id])
-
-  comments Comment[]
+  categoryId  String
+  category    ResourceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 }

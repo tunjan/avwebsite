@@ -7,8 +7,12 @@ import App from './App.tsx';
 import './index.css';
 import 'react-datepicker/dist/react-datepicker.css';
 
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error("Failed to find the root element");
+}
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>

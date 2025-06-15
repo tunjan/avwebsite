@@ -1,14 +1,19 @@
-import { Navigate } from 'react-router-dom';
+import React, { ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../hooks';
-import { ReactNode } from 'react';
-import React from 'react';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { token } = useAppSelector((state) => state.auth);
+  const location = useLocation();
+
   if (!token) {
-    return <Navigate to="/login" replace />;
+    // Redirect them to the /login page, but save the current location they were
+    // trying to go to. This allows us to send them along to that page after they
+    // log in, which is a nicer user experience.
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  return children;
+
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
