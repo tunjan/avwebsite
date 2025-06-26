@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "../api/axiosConfig";
+import { type AxiosError } from "axios";
 import { useAppSelector } from "../hooks";
 import { Chapter, Region } from "../types";
 import { Link } from "react-router-dom";
@@ -38,15 +39,15 @@ const AnnouncementsView = () => {
     try {
       const { data } = await axios.get("/api/announcements");
       setAnnouncements(data);
-    } catch (error) {
-      console.error("Failed to fetch announcements", error);
+    } catch {
+      console.error("Failed to fetch announcements");
     }
   }, []);
 
   const fetchFormData = useCallback(async () => {
     if (!canPost || !user) return;
     try {
-        const { data: manageableChapters } = await axios.get('/api/chapters/my-managed');
+        const { data: manageableChapters } = await axios.get<Chapter[]>('/api/chapters/my-managed');
         setCityPostOptions(manageableChapters);
 
         if (manageableChapters.length === 1 && user.role === 'CITY_ORGANISER') {
@@ -54,7 +55,7 @@ const AnnouncementsView = () => {
         }
         
         if (user.role === 'COFOUNDER' || user.role === 'REGIONAL_ORGANISER') {
-            const { data: allRegions } = await axios.get('/api/regions');
+            const { data: allRegions } = await axios.get<Region[]>('/api/regions');
             if (user.role === 'REGIONAL_ORGANISER') {
                 setRegionPostOptions(allRegions.filter((r: Region) => r.id === user.managedRegionId));
             } else {
@@ -88,7 +89,16 @@ const AnnouncementsView = () => {
     }
 
     setIsSubmitting(true);
-    const payload: any = {
+
+    interface AnnouncementPayload {
+      title: string;
+      content: string;
+      scope: "CITY" | "REGIONAL" | "GLOBAL";
+      chapterId?: string;
+      regionId?: string;
+    }
+
+    const payload: AnnouncementPayload = {
       title: newAnnouncement.title,
       content: newAnnouncement.content,
       scope: newAnnouncement.scope,
@@ -102,8 +112,9 @@ const AnnouncementsView = () => {
       setShowForm(false);
       setNewAnnouncement({ title: "", content: "", scope: "CITY", targetId: "" });
       await fetchAnnouncements();
-    } catch (error: any) {
-      setModalState({ isOpen: true, title: "Error", message: error.response?.data?.message || "Failed to post announcement." });
+    } catch (error) {
+      const err = error as AxiosError<{ message: string }>;
+      setModalState({ isOpen: true, title: "Error", message: err.response?.data?.message || "Failed to post announcement." });
     } finally {
       setIsSubmitting(false);
     }

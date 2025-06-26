@@ -1,5 +1,5 @@
-import { createSlice, createAsyncThunk, PayloadAction, isRejectedWithValue } from '@reduxjs/toolkit';
-import axios from '../api/axiosConfig';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import axios, { type AxiosError } from '../api/axiosConfig';
 
 interface User {
     id: string;
@@ -29,16 +29,22 @@ interface LoginPayload {
     token: string;
 }
 
-export const login = createAsyncThunk<LoginPayload, any, { rejectValue: string }>(
+interface LoginCredentials {
+    email: string;
+    password: string;
+}
+
+export const login = createAsyncThunk<LoginPayload, LoginCredentials, { rejectValue: string }>(
     'auth/login',
-    async (credentials: any, thunkAPI) => {
+    async (credentials, thunkAPI) => {
         try {
             const response = await axios.post('/api/auth/login', credentials);
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.user));
             return response.data;
-        } catch (error: any) {
-            const message = error.response?.data?.message || error.message || "An unknown error occurred";
+        } catch (error) {
+            const err = error as AxiosError<{ message: string }>;
+            const message = err.response?.data?.message || err.message || "An unknown error occurred";
             return thunkAPI.rejectWithValue(message);
         }
     }

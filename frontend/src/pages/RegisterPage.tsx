@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios, { type AxiosError } from 'axios';
 import { Chapter } from '../types';
 import Modal from '../components/Modal';
 
@@ -63,8 +63,9 @@ const RegisterPage = () => {
         title: 'Registration Successful',
         message: 'Your request to join the chapter has been sent to an organizer for approval. You will be able to log in after your request is approved.',
       });
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

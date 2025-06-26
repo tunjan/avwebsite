@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAppDispatch } from "../hooks";
 import { login } from "../store/authSlice";
+import { type AxiosError } from 'axios';
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -21,8 +22,9 @@ const LoginPage = () => {
     try {
       await dispatch(login({ email, password })).unwrap();
       navigate(from, { replace: true });
-    } catch (err: any) {
-      setError(err.message || "Failed to login. Please check your credentials.");
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || "Failed to login. Please check your credentials.");
       setLoading(false);
     }
   };

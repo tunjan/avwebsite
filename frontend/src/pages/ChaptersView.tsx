@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 import { useAppSelector } from '../hooks';
 import Modal from '../components/Modal';
 import { Chapter, Region } from '../types';
@@ -73,8 +74,9 @@ const ChaptersView: React.FC = () => {
       setShowForm(false);
       setNewChapter({ name: '', description: '', regionId: '' });
       await fetchAllData();
-    } catch (err: any) {
-      setModalState({ isOpen: true, title: "Error", message: err.response?.data?.message || "Failed to create chapter." });
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setModalState({ isOpen: true, title: "Error", message: error.response?.data?.message || "Failed to create chapter." });
     } finally {
       setIsSubmitting(false);
     }
@@ -84,8 +86,9 @@ const ChaptersView: React.FC = () => {
     try {
       await axios.post(`/api/chapters/${chapterId}/request-join`);
       setModalState({ isOpen: true, title: "Request Sent", message: "Your request to join the chapter has been sent for approval." });
-    } catch (error: any) {
-      setModalState({ isOpen: true, title: "Request Failed", message: error.response?.data?.message || "Could not send join request." });
+    } catch (error) {
+      const err = error as AxiosError<{ message: string }>;
+      setModalState({ isOpen: true, title: "Request Failed", message: err.response?.data?.message || "Could not send join request." });
     }
   };
   
@@ -94,8 +97,9 @@ const ChaptersView: React.FC = () => {
         await axios.post(`/api/chapters/${chapterId}/become-member`);
         setModalState({ isOpen: true, title: "Success", message: "You are now an official member of this chapter." });
         await fetchAllData();
-    } catch (error: any) {
-        setModalState({ isOpen: true, title: "Error", message: error.response?.data?.message || "Could not join chapter." });
+    } catch (error) {
+        const err = error as AxiosError<{ message: string }>;
+        setModalState({ isOpen: true, title: "Error", message: err.response?.data?.message || "Could not join chapter." });
     }
   };
 

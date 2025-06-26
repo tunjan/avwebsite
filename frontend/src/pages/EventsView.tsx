@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import axios from "../api/axiosConfig";
+import { type AxiosError } from "axios";
 import { useAppSelector } from "../hooks";
 import Modal from "../components/Modal";
 import { Chapter, Region } from "../types";
@@ -113,8 +114,9 @@ const EventsView = () => {
       setModalState({ isOpen: true, title: "Success", message: "Event created successfully!" });
       setShowForm(false);
       setNewEvent(initialNewEventState);
-    } catch (err: any) {
-      setModalState({ isOpen: true, title: "Error", message: err.response?.data?.message || "Failed to create event." });
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setModalState({ isOpen: true, title: "Error", message: error.response?.data?.message || "Failed to create event." });
     } finally {
       setIsSubmitting(false);
     }
@@ -130,8 +132,9 @@ const EventsView = () => {
             await axios.delete(url);
         }
         setAllEvents(prev => prev.map(e => e.id === eventId ? { ...e, isRegistered: rsvp, attendeeCount: e.attendeeCount + (rsvp ? 1 : -1) } : e));
-    } catch (error: any) {
-        setModalState({ isOpen: true, title: "Error", message: error.response?.data?.message || "Action failed." });
+    } catch (error) {
+        const err = error as AxiosError<{ message: string }>;
+        setModalState({ isOpen: true, title: "Error", message: err.response?.data?.message || "Action failed." });
     }
   };
 

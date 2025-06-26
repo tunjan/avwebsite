@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 import { useAppSelector } from '../hooks';
 import PromotionModal from '../components/PromotionModal';
 
@@ -43,8 +44,9 @@ const ChapterMembersView: React.FC = () => {
         const requestsRes = await axios.get(`/api/chapters/${chapterId}/join-requests`);
         setJoinRequests(requestsRes.data);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "An error occurred while loading data.");
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || "An error occurred while loading data.");
     } finally {
       setLoading(false);
     }
@@ -63,7 +65,7 @@ const ChapterMembersView: React.FC = () => {
       try {
         const { data } = await axios.get(`/api/users/search?q=${searchTerm}`);
         setSearchResults(data.filter((userResult: Member) => !members.some(m => m.id === userResult.id)));
-      } catch (error) { console.error("Search failed", error); }
+      } catch { console.error("Search failed"); }
     };
     const delayDebounce = setTimeout(() => handleSearch(), 300);
     return () => clearTimeout(delayDebounce);
@@ -75,7 +77,7 @@ const ChapterMembersView: React.FC = () => {
       setSearchTerm('');
       setSearchResults([]);
       await fetchViewData();
-    } catch (error) { alert("Failed to add member."); }
+    } catch { alert("Failed to add member."); }
   };
 
   const handleRemoveMember = async (userId: string) => {
@@ -87,7 +89,7 @@ const ChapterMembersView: React.FC = () => {
       try {
         await axios.delete(`/api/chapters/${chapterId}/members/${userId}`);
         await fetchViewData();
-      } catch (error) { alert("Failed to remove member."); }
+      } catch { alert("Failed to remove member."); }
     }
   };
 
@@ -95,7 +97,7 @@ const ChapterMembersView: React.FC = () => {
     try {
       await axios.post(`/api/chapters/${chapterId}/join-requests/${requestId}`, { approve });
       await fetchViewData();
-    } catch (err) { alert("Failed to process request."); }
+    } catch { alert("Failed to process request."); }
   };
 
   const handleOpenPromotionModal = (member: Member) => {

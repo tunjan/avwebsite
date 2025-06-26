@@ -57,7 +57,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ targetId, targetType }) =
       const { data: postedComment } = await axios.post('/api/comments', payload);
       setComments((prevComments) => [...prevComments, postedComment]);
       setNewComment('');
-    } catch (error) {
+    } catch {
       setModalState({
         isOpen: true,
         title: 'Error',

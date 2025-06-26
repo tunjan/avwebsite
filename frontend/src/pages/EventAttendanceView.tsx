@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 import Modal from '../components/Modal';
 
 interface Registration {
@@ -27,8 +28,9 @@ const EventAttendanceView = () => {
     try {
       const { data } = await axios.get(`/api/events/${eventId}/registrations`);
       setRegistrations(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Could not load attendance data.');
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || 'Could not load attendance data.');
     } finally {
       setLoading(false);
     }

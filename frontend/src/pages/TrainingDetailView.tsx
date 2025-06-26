@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 import Modal from '../components/Modal';
 
 interface TrainingDetails {
@@ -33,8 +34,9 @@ const TrainingDetailView: React.FC = () => {
     try {
       const { data } = await axios.get(`/api/trainings/${trainingId}`);
       setTraining(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Could not load training.");
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || "Could not load training.");
     } finally {
       setLoading(false);
     }
@@ -63,8 +65,9 @@ const TrainingDetailView: React.FC = () => {
       setTraining(prev => prev ? { ...prev, ...updatedTraining } : updatedTraining);
       setIsEditing(false);
       setModalState({ isOpen: true, title: 'Success', message: 'Training updated successfully.' });
-    } catch (err: any) {
-      setModalState({ isOpen: true, title: 'Error', message: err.response?.data?.message || 'Failed to update training.' });
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setModalState({ isOpen: true, title: 'Error', message: error.response?.data?.message || 'Failed to update training.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -77,7 +80,7 @@ const TrainingDetailView: React.FC = () => {
         await axios.delete(`/api/trainings/${trainingId}`);
         setModalState({ isOpen: true, title: 'Success', message: 'Training deleted. Redirecting...' });
         setTimeout(() => navigate('/trainings'), 1500);
-      } catch (err) {
+      } catch {
         setModalState({ isOpen: true, title: 'Error', message: 'Failed to delete training.' });
         setIsSubmitting(false);
       }

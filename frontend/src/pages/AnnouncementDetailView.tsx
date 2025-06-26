@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 import CommentThread from '../components/CommentThread';
 import Modal from '../components/Modal';
 
@@ -37,8 +38,9 @@ const AnnouncementDetailView: React.FC = () => {
     try {
       const { data } = await axios.get(`/api/announcements/${announcementId}`);
       setAnnouncement(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Could not load announcement. It may not exist or you may not have permission to view it.");
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || "Could not load announcement. It may not exist or you may not have permission to view it.");
     } finally {
       setLoading(false);
     }
@@ -55,7 +57,7 @@ const AnnouncementDetailView: React.FC = () => {
         await axios.delete(`/api/announcements/${announcementId}`);
         setModalState({ isOpen: true, title: 'Success', message: 'Announcement deleted.' });
         setTimeout(() => navigate('/announcements'), 1500);
-      } catch (err) {
+      } catch {
         setModalState({ isOpen: true, title: 'Error', message: 'Failed to delete announcement.' });
         setIsSubmitting(false);
       }
@@ -73,7 +75,7 @@ const AnnouncementDetailView: React.FC = () => {
       setAnnouncement(prev => prev ? { ...prev, ...updatedAnnouncement } : updatedAnnouncement);
       setIsEditing(false);
       setModalState({ isOpen: true, title: 'Success', message: 'Announcement updated.' });
-    } catch (err) {
+    } catch {
       setModalState({ isOpen: true, title: 'Error', message: 'Failed to update announcement.' });
     } finally {
       setIsSubmitting(false);

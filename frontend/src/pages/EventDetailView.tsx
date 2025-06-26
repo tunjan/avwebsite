@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 import { useAppSelector } from '../hooks';
 import CommentThread from '../components/CommentThread';
 import Modal from '../components/Modal';
@@ -56,8 +57,9 @@ const EventDetailView: React.FC = () => {
       ]);
       setEvent(eventRes.data);
       setAttendees(attendeesRes.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load event details.');
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || 'Failed to load event details.');
     } finally {
       setLoading(false);
     }
@@ -81,8 +83,9 @@ const EventDetailView: React.FC = () => {
       await axios.post(`/api/events/${eventId}/rsvp`);
       setEvent((prev) => (prev ? { ...prev, isRegistered: true } : null));
       if (user) setAttendees((prev) => [...prev, { id: user.id, name: user.name }]);
-    } catch (err: any) {
-      setModalState({ isOpen: true, title: 'Error', message: err.response?.data?.message || 'Failed to RSVP.' });
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setModalState({ isOpen: true, title: 'Error', message: error.response?.data?.message || 'Failed to RSVP.' });
     }
   };
 
@@ -92,8 +95,9 @@ const EventDetailView: React.FC = () => {
         await axios.delete(`/api/events/${eventId}/rsvp`);
         setEvent((prev) => (prev ? { ...prev, isRegistered: false } : null));
         if (user) setAttendees((prev) => prev.filter((att) => att.id !== user.id));
-      } catch (err: any) {
-        setModalState({ isOpen: true, title: 'Error', message: err.response?.data?.message || 'Failed to cancel RSVP.' });
+      } catch (err) {
+        const error = err as AxiosError<{ message: string }>;
+        setModalState({ isOpen: true, title: 'Error', message: error.response?.data?.message || 'Failed to cancel RSVP.' });
       }
     }
   };
@@ -107,8 +111,9 @@ const EventDetailView: React.FC = () => {
         setEvent(prev => prev ? { ...prev, ...data } : data);
         setIsEditing(false);
         setModalState({ isOpen: true, title: 'Success', message: 'Event updated successfully.' });
-    } catch (err: any) {
-        setModalState({ isOpen: true, title: 'Error', message: err.response?.data?.message || 'Failed to update event.' });
+    } catch (err) {
+        const error = err as AxiosError<{ message: string }>;
+        setModalState({ isOpen: true, title: 'Error', message: error.response?.data?.message || 'Failed to update event.' });
     } finally {
         setIsSubmitting(false);
     }
@@ -121,8 +126,9 @@ const handleDelete = async () => {
             await axios.delete(`/api/events/${eventId}`);
             setModalState({ isOpen: true, title: 'Success', message: 'Event deleted.' });
             setTimeout(() => navigate('/events'), 1500);
-        } catch (err: any) {
-            setModalState({ isOpen: true, title: 'Error', message: err.response?.data?.message || 'Failed to delete event.' });
+        } catch (err) {
+            const error = err as AxiosError<{ message: string }>;
+            setModalState({ isOpen: true, title: 'Error', message: error.response?.data?.message || 'Failed to delete event.' });
             setIsSubmitting(false);
         }
     }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 import { useAppSelector } from '../hooks';
 import Modal from '../components/Modal';
 import { Chapter, Region } from '../types';
@@ -53,7 +54,7 @@ const TrainingsView = () => {
     try {
       const { data } = await axios.get('/api/trainings');
       setTrainings(data);
-    } catch (error) { console.error("Failed to fetch trainings", error); }
+    } catch { console.error("Failed to fetch trainings"); }
   }, []);
 
   const fetchFormData = useCallback(async () => {
@@ -69,7 +70,7 @@ const TrainingsView = () => {
       if (manageableChapters.length === 1 && user.role === 'CITY_ORGANISER') {
         setNewTraining(prev => ({ ...prev, scope: 'CITY', targetId: manageableChapters[0].id }));
       }
-    } catch (err) { console.error("Failed to fetch form data for training creation", err); }
+    } catch { console.error("Failed to fetch form data for training creation"); }
   }, [canPost, user]);
 
   useEffect(() => {
@@ -89,7 +90,17 @@ const TrainingsView = () => {
         return;
     }
     setIsSubmitting(true);
-    const payload: any = {
+    interface TrainingPayload {
+      title: string;
+      description: string;
+      startTime: string;
+      duration: number;
+      scope: 'CITY' | 'REGIONAL' | 'GLOBAL';
+      chapterId?: string;
+      regionId?: string;
+    }
+
+    const payload: TrainingPayload = {
       ...newTraining, duration: parseFloat(newTraining.duration.toString()),
     };
     if (newTraining.scope === "CITY") payload.chapterId = newTraining.targetId;
@@ -101,8 +112,9 @@ const TrainingsView = () => {
       setShowForm(false);
       setNewTraining({ title: '', description: '', startTime: '', duration: 1, scope: 'CITY', targetId: '' });
       await fetchTrainings();
-    } catch (error: any) {
-      setModalState({ isOpen: true, title: "Error", message: error.response?.data?.message || "Failed to create training." });
+    } catch (error) {
+      const err = error as AxiosError<{ message: string }>;
+      setModalState({ isOpen: true, title: "Error", message: err.response?.data?.message || "Failed to create training." });
     } finally {
       setIsSubmitting(false);
     }
@@ -112,10 +124,15 @@ const TrainingsView = () => {
     if (!rsvp && !window.confirm("Cancel your registration for this training?")) return;
     try {
         const url = `/api/trainings/${trainingId}/rsvp`;
-        rsvp ? await axios.post(url) : await axios.delete(url);
+        if (rsvp) {
+            await axios.post(url);
+        } else {
+            await axios.delete(url);
+        }
         setTrainings(prev => prev.map(t => t.id === trainingId ? { ...t, isRegistered: rsvp } : t));
-    } catch (error: any) {
-        setModalState({ isOpen: true, title: "Error", message: error.response?.data?.message || "Action failed."});
+    } catch (error) {
+        const err = error as AxiosError<{ message: string }>;
+        setModalState({ isOpen: true, title: "Error", message: err.response?.data?.message || "Action failed."});
     }
   };
 

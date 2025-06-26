@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 
 interface ChapterStats {
   name: string;
@@ -25,9 +26,10 @@ const ChapterDetailView: React.FC = () => {
       try {
         const { data } = await axios.get(`/api/chapters/${chapterId}/stats`);
         setStats(data);
-      } catch (err: any) {
-        console.error('Failed to fetch chapter stats', err);
-        setError(err.response?.data?.message || "Could not load statistics for this chapter.");
+      } catch (err) {
+        const error = err as AxiosError<{ message: string }>;
+        console.error('Failed to fetch chapter stats', error);
+        setError(error.response?.data?.message || "Could not load statistics for this chapter.");
       } finally {
         setLoading(false);
       }

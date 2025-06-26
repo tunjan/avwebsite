@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { useAppSelector } from '../hooks';
 import axios from '../api/axiosConfig';
+import { type AxiosError } from 'axios';
 
 interface TargetOption { id: string; name: string; }
 interface MemberToPromote { id: string; name: string; role: string; }
@@ -73,8 +74,9 @@ const PromotionModal: React.FC<PromotionModalProps> = ({ isOpen, onClose, onSucc
         await axios.post(`/api/promote/${memberToPromote.id}`, { newRole, targetId });
         onSuccess();
         onClose();
-    } catch (err: any) {
-        setError(err.response?.data?.message || "An unexpected error occurred during promotion.");
+    } catch (err) {
+        const error = err as AxiosError<{ message: string }>;
+        setError(error.response?.data?.message || "An unexpected error occurred during promotion.");
     } finally {
         setIsSubmitting(false);
     }

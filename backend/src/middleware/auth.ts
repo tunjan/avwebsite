@@ -32,22 +32,28 @@ export const canCreateContent = async (req: Request, res: Response, next: NextFu
 
     // Rule 1: Co-founders can create any type of content.
     if (user.role === Role.COFOUNDER) {
-        return next();
+        next();
+        return;
     }
 
     // Rule 2: Regional Organisers can create content in their region.
     if (user.role === Role.REGIONAL_ORGANISER) {
         if (!user.managedRegionId) {
-            return res.status(403).json({ message: "Forbidden: You are not assigned to a region to manage." });
+            res.status(403).json({ message: "Forbidden: You are not assigned to a region to manage." });
+            return;
         }
         // Allow creating a REGIONAL item for their own region.
         if (scope === 'REGIONAL' && regionId === user.managedRegionId) {
-            return next();
+            next();
+            return;
         }
         // Allow creating a CITY item for a chapter within their region.
         if (scope === 'CITY' && chapterId) {
             const chapter = await prisma.chapter.findFirst({ where: { id: chapterId, regionId: user.managedRegionId } });
-            if (chapter) return next();
+            if (chapter) {
+                next();
+                return;
+            }
         }
     }
 
@@ -60,11 +66,13 @@ export const canCreateContent = async (req: Request, res: Response, next: NextFu
     const managedChapterIds = cityOrganiserMemberships.map(m => m.chapterId);
 
     if (scope === 'CITY' && chapterId && managedChapterIds.includes(chapterId)) {
-        return next();
+        next();
+        return;
     }
 
     // If no rule above passed, deny access.
-    return res.status(403).json({ message: "Forbidden: You do not have the required role for this target to perform this action." });
+    res.status(403).json({ message: "Forbidden: You do not have the required role for this target to perform this action." });
+    return;
 };
 
 /**
@@ -81,10 +89,16 @@ export const canModifyContent = async (req: Request, res: Response, next: NextFu
         else if (eventId) content = await prisma.event.findUnique({ where: { id: eventId } });
         else if (trainingId) content = await prisma.training.findUnique({ where: { id: trainingId } });
 
-        if (!content) return res.status(404).json({ message: 'Content not found.' });
+        if (!content) {
+            res.status(404).json({ message: 'Content not found.' });
+            return;
+        }
 
         // Rule 1: You can always modify your own content.
-        if (content.authorId === manager.id) return next();
+        if (content.authorId === manager.id) {
+            next();
+            return;
+        }
 
         const rolePower = { COFOUNDER: 1, REGIONAL_ORGANISER: 2, CITY_ORGANISER: 3, ACTIVIST: 4 };
         const managerPower = rolePower[manager.role as keyof typeof rolePower];
@@ -92,21 +106,30 @@ export const canModifyContent = async (req: Request, res: Response, next: NextFu
 
         // Rule 2: Cannot modify content from someone with equal or greater power.
         if (managerPower >= authorPower) {
-            return res.status(403).json({ message: "Forbidden: You cannot modify content from a user at or above your level." });
+            res.status(403).json({ message: "Forbidden: You cannot modify content from a user at or above your level." });
+            return;
         }
 
         // Rule 3: Hierarchical override (Co-founder can manage anything below them).
-        if (manager.role === Role.COFOUNDER) return next();
+        if (manager.role === Role.COFOUNDER) {
+            next();
+            return;
+        }
 
         // Rule 4: Regional Organiser can manage city content within their region.
         if (manager.role === Role.REGIONAL_ORGANISER && content.scope === 'CITY' && content.chapterId) {
             const chapter = await prisma.chapter.findUnique({ where: { id: content.chapterId } });
-            if (chapter && chapter.regionId === manager.managedRegionId) return next();
+            if (chapter && chapter.regionId === manager.managedRegionId) {
+                next();
+                return;
+            }
         }
 
-        return res.status(403).json({ message: "Forbidden: You do not have permission to modify this content." });
+        res.status(403).json({ message: "Forbidden: You do not have permission to modify this content." });
+        return;
     } catch (error) {
-        return res.status(500).json({ message: 'Authorization error.' });
+        res.status(500).json({ message: 'Authorization error.' });
+        return;
     }
 }
 
@@ -162,23 +185,35 @@ export const canManageChapterMembers = async (req: Request, res: Response, next:
     const { chapterId } = req.params;
 
     if (!chapterId) {
-        return res.status(400).json({ message: 'Chapter ID parameter is required.' });
+        res.status(400).json({ message: 'Chapter ID parameter is required.' });
+        return;
     }
 
-    if (manager.role === Role.COFOUNDER) return next();
+    if (manager.role === Role.COFOUNDER) {
+        next();
+        return;
+    }
 
     if (manager.role === Role.REGIONAL_ORGANISER) {
-        if (!manager.managedRegionId) return res.status(403).json({ message: 'Forbidden: You are not assigned to a region.' });
+        if (!manager.managedRegionId) {
+            res.status(403).json({ message: 'Forbidden: You are not assigned to a region.' });
+            return;
+        }
         const chapter = await prisma.chapter.findFirst({ where: { id: chapterId, regionId: manager.managedRegionId } });
-        if (chapter) return next();
+        if (chapter) {
+            next();
+            return;
+        }
     }
 
     const chapterRole = await getUserChapterRole(manager.id, chapterId);
     if (chapterRole === Role.CITY_ORGANISER) {
-        return next();
+        next();
+        return;
     }
 
-    return res.status(403).json({ message: 'Forbidden: You do not have permission to manage this chapter.' });
+    res.status(403).json({ message: 'Forbidden: You do not have permission to manage this chapter.' });
+    return;
 };
 
 /**
@@ -189,16 +224,22 @@ export const canCreateChapter = async (req: Request, res: Response, next: NextFu
     const { regionId } = req.body;
 
     if (!regionId) {
-        return res.status(400).json({ message: "A regionId is required to create a chapter." });
+        res.status(400).json({ message: "A regionId is required to create a chapter." });
+        return;
     }
 
-    if (user.role === Role.COFOUNDER) return next();
+    if (user.role === Role.COFOUNDER) {
+        next();
+        return;
+    }
 
     if (user.role === Role.REGIONAL_ORGANISER) {
         if (user.managedRegionId && user.managedRegionId === regionId) {
-            return next();
+            next();
+            return;
         }
     }
 
-    return res.status(403).json({ message: "Forbidden: You do not have permission to create a chapter in this region." });
+    res.status(403).json({ message: "Forbidden: You do not have permission to create a chapter in this region." });
+    return;
 }
