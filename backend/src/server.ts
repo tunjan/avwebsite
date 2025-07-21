@@ -25,9 +25,24 @@ const app = express();
 const port = parseInt(process.env.PORT || '9888', 10);
 
 // --- FIX: Hardened CORS Configuration ---
+const allowedOrigins = [
+    process.env.CORS_ORIGIN || 'http://localhost:5173', // Your local frontend
+];
+
+if (process.env.VERCEL_URL) {
+    allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
+}
+
 const corsOptions = {
-    // Use the origin from the .env file, with a fallback for safety
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
     // Explicitly allow methods your application uses
     methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
     // Explicitly allow headers that the frontend will send (especially Authorization)
