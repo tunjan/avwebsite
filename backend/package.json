@@ -6,17 +6,22 @@
         "build": "npx tsc",
         "start": "node dist/server.js",
         "dev": "nodemon src/server.ts",
-        "prisma:seed": "ts-node prisma/seed.ts"
+        "prisma:seed": "ts-node prisma/seed.ts",
+        "test": "jest",
+        "postinstall": "npx prisma generate"
     },
     "dependencies": {
         "@prisma/client": "^6.10.1",
+        "@types/jest": "^30.0.0",
         "bcrypt": "^6.0.0",
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",
         "express": "^5.1.0",
+        "jest": "^29.7.0",
         "jsonwebtoken": "^9.0.2",
         "passport": "^0.7.0",
-        "passport-jwt": "^4.0.1"
+        "passport-jwt": "^4.0.1",
+        "ts-jest": "^29.4.0"
     },
     "devDependencies": {
         "@faker-js/faker": "^9.8.0",
