@@ -62,23 +62,23 @@ app.use(passport.initialize());
 configurePassport(passport);
 
 // --- API Routes ---
-app.use('/api/auth', authRoutes);
-app.use('/api/public', publicRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/profile', profileRoutes);
+app.use('/auth', authRoutes);
+app.use('/public', publicRoutes);
+app.use('/dashboard', dashboardRoutes);
+app.use('/profile', profileRoutes);
 
-app.use('/api/users', userRoutes);
-app.use('/api/promote', promotionRoutes);
+app.use('/users', userRoutes);
+app.use('/promote', promotionRoutes);
 
-app.use('/api/regions', regionRoutes);
-app.use('/api/chapters', chapterRoutes);
+app.use('/regions', regionRoutes);
+app.use('/chapters', chapterRoutes);
 
-app.use('/api/events', eventRoutes);
-app.use('/api/trainings', trainingRoutes);
-app.use('/api/announcements', announcementRoutes);
+app.use('/events', eventRoutes);
+app.use('/trainings', trainingRoutes);
+app.use('/announcements', announcementRoutes);
 
-app.use('/api/resources', resourceRoutes);
-app.use('/api/comments', commentRoutes);
+app.use('/resources', resourceRoutes);
+app.use('/comments', commentRoutes);
 
 // --- Server Startup ---
 app.listen(port, () => {
