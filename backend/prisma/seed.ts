@@ -1,6 +1,6 @@
 import { PrismaClient, Role } from '@prisma/client';
 import { Faker, en } from '@faker-js/faker';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 const faker = new Faker({ locale: [en] });
