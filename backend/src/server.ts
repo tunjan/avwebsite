@@ -18,6 +18,7 @@ import resourceRoutes from './routes/resourceRoutes';
 import trainingRoutes from './routes/trainingRoutes';
 import userRoutes from './routes/userRoutes';
 import announcementRoutes from './routes/announcementRoutes';
+import devRoutes from './routes/devRoutes'; // Import dev routes
 
 dotenv.config();
 
@@ -34,7 +35,7 @@ if (process.env.VERCEL_URL) {
 }
 
 const corsOptions = {
-    origin: function (origin, callback) {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         if (allowedOrigins.indexOf(origin) === -1) {
