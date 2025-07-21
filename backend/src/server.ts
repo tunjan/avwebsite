@@ -80,6 +80,11 @@ app.use('/announcements', announcementRoutes);
 app.use('/resources', resourceRoutes);
 app.use('/comments', commentRoutes);
 
+// --- Dev Routes (for manual seeding) ---
+if (process.env.NODE_ENV === 'development') {
+    app.use('/dev', devRoutes);
+}
+
 // --- Server Startup ---
 app.listen(port, () => {
     console.log(`✅ Backend server running on port: ${port}`);
