@@ -1,3 +1,13 @@
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_API_URL: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
 import axios from 'axios';
 import { store } from '../store/store';
 import { logout } from '../store/authSlice';
