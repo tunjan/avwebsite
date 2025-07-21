@@ -2,11 +2,12 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { exec } from 'child_process';
 import util from 'util';
+import asyncHandler from '../utils/asyncHandler';
 
 const router = Router();
 const execAsync = util.promisify(exec);
 
-router.post('/seed', async (req, res) => {
+router.post('/seed', asyncHandler(async (req, res) => {
     const { secret } = req.body;
 
     if (secret !== process.env.SEED_SECRET) {
@@ -27,10 +28,14 @@ router.post('/seed', async (req, res) => {
         console.log(`Seed script stdout: ${stdout}`);
         res.status(200).json({ message: 'Database seeding initiated successfully.', output: stdout });
 
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Failed to execute seed script:', error);
-        res.status(500).json({ message: 'Failed to execute seed script.', error: error.message });
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Failed to execute seed script.', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Failed to execute seed script.', error: 'An unknown error occurred.' });
+        }
     }
-});
+}));
 
 export default router;
